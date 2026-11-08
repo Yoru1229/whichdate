@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>月經週期紀錄</title>
+<style>
+:root{--bg:#f6f3f7;--card:#fff;--ink:#2a2230;--mute:#7b7285;--line:#e5dfe9;--berry:#b3274f;--berry-soft:#f6d9e1;--ok:#2f7d6d;--win:#dff0ec;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#18141c;--card:#231e29;--ink:#f1ecf4;--mute:#a69cb0;--line:#3a3243;--berry:#e0587c;--berry-soft:#4a2433;--ok:#5cc2ad;--win:#1f3a35;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+main{max-width:520px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:22px;margin:0 0 4px}
+h2{font-size:16px;margin:0 0 10px}
+.sub{color:var(--mute);font-size:13px;margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.next{font-size:30px;font-weight:700;color:var(--berry);line-height:1.2}
+.next small{font-size:14px;font-weight:400;color:var(--mute);display:block;margin-top:4px}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px;text-align:center}
+.stats b{display:block;font-size:20px}
+.stats span{font-size:12px;color:var(--mute)}
+.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.nav strong{font-size:17px}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:8px 14px}
+button:focus-visible,input:focus-visible{outline:2px solid var(--berry);outline-offset:2px}
+button.primary{background:var(--berry);border-color:var(--berry);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wd{text-align:center;font-size:12px;color:var(--mute);padding:4px 0}
+.day{aspect-ratio:1;border-radius:50%;border:2px solid transparent;background:none;padding:0;display:flex;align-items:center;justify-content:center;font-size:15px;position:relative}
+.day.empty{visibility:hidden}
+.day.today{border-color:var(--ink)}
+.day.p{background:var(--berry);color:#fff}
+.day.u{background:repeating-linear-gradient(45deg,var(--berry) 0 5px,#d9718f 5px 10px);color:#fff}
+.day.pred{border:2px dashed var(--berry);color:var(--berry)}
+.day.win{background:var(--win)}
+.tip{margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--win);font-size:14px}
+.day.ov::after{content:"";position:absolute;bottom:3px;width:5px;height:5px;border-radius:50%;background:var(--ok)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--mute);margin-top:12px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:4px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.row label{font-size:14px}
+input[type=date]{font:inherit;padding:7px 8px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:14px;margin-bottom:12px}
+.chk input{margin-top:5px}
+.hint{font-size:12px;color:var(--mute);margin:8px 0 0}
+ul{list-style:none;margin:0;padding:0}
+li{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+li:first-child{border-top:0}
+li span:last-child{color:var(--mute);text-align:right}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.note{font-size:12px;color:var(--mute);margin-top:6px}
+</style>
+</head>
+<body>
+<main>
+<h1>月經週期紀錄</h1>
+<p class="sub">資料只存在這個瀏覽器裡，不會上傳到任何地方。</p>
+
+<section class="card" id="summary"></section>
+
+<section class="card">
+  <div class="nav">
+    <button id="prev" aria-label="上個月">‹</button>
+    <strong id="title"></strong>
+    <button id="nextm" aria-label="下個月">›</button>
+  </div>
+  <div class="grid" id="wds"></div>
+  <div class="grid" id="cal"></div>
+  <div class="legend">
+    <span><i style="background:var(--berry)"></i>月經日</span>
+    <span><i style="background:repeating-linear-gradient(45deg,var(--berry) 0 3px,#d9718f 3px 6px)"></i>起始日不確定</span>
+    <span><i style="border:2px dashed var(--berry)"></i>預測</span>
+    <span><i style="background:var(--win);border:1px solid var(--ok)"></i>排卵期（分泌物可能較多）</span>
+    <span><i style="background:var(--ok);width:7px;height:7px"></i>預估排卵日</span>
+  </div>
+  <p class="hint">點日期可標記或取消月經日。</p>
+</section>
+
+<section class="card">
+  <h2>一次記錄多天</h2>
+  <div class="row">
+    <label>從 <input type="date" id="from"></label>
+    <label>到 <input type="date" id="to"></label>
+  </div>
+  <label class="chk"><input type="checkbox" id="unsure"><span>不確定是哪天開始的（只記得這幾天有月經，實際可能更早開始）</span></label>
+  <button class="primary" id="addRange">加入紀錄</button>
+  <p class="hint">勾選「不確定」時，會以你填的第一天暫代起始日來估算週期，並在歷史紀錄中以「約」標示。</p>
+</section>
+
+<section class="card">
+  <h2>歷史紀錄</h2>
+  <ul id="hist"></ul>
+</section>
+
+<section class="card">
+  <h2>備份</h2>
+  <div class="tools">
+    <button id="exp">匯出備份</button>
+    <button id="imp">匯入備份</button>
+    <button id="clr">清除全部資料</button>
+  </div>
+  <input type="file" id="file" accept="application/json" hidden>
+  <p class="note">清除瀏覽器資料或換裝置會讓紀錄消失，建議定期匯出備份。預測僅供參考，不能作為避孕或醫療依據。</p>
+</section>
+</main>
+
+<script>
+const KEY = 'period-tracker-v1';
+let data = load();
+let view = new Date(); view.setDate(1);
+
+function load(){
+  try { const d = JSON.parse(localStorage.getItem(KEY)); if (d && d.days) return d; } catch(e){}
+  return {days:{}};
+}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(data)); } catch(e){} }
+
+const pad = n => String(n).padStart(2,'0');
+const fmt = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const num = s => { const [y,m,d] = s.split('-').map(Number); return Math.round(Date.UTC(y,m-1,d)/864e5); };
+const str = n => { const d = new Date(n*864e5); return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate()); };
+const show = n => { const d = new Date(n*864e5); return (d.getUTCMonth()+1)+'/'+d.getUTCDate(); };
+const todayN = () => num(fmt(new Date()));
+
+// Group marked days into periods (gap of up to 2 unmarked days still counts as the same period)
+function periods(){
+  const ks = Object.keys(data.days).map(num).sort((a,b)=>a-b);
+  const out = [];
+  ks.forEach(n => {
+    const last = out[out.length-1];
+    if (last && n - last.end <= 3) { last.end = n; }
+    else out.push({start:n, end:n});
+  });
+  out.forEach(p => { p.len = p.end - p.start + 1; p.approx = data.days[str(p.start)] === 'u'; });
+  return out;
+}
+
+function analyze(){
+  const ps = periods();
+  const res = {ps, cycles:[], avg:null, lens:5, lastStart:null, sure:false};
+  if (!ps.length) return res;
+  for (let i=1;i<ps.length;i++){
+    const c = ps[i].start - ps[i-1].start;
+    if (c >= 15 && c <= 70) res.cycles.push(c);
+  }
+  const recent = res.cycles.slice(-6);
+  if (recent.length){
+    res.avg = Math.round(recent.reduce((a,b)=>a+b,0)/recent.length);
+    res.min = Math.min(...recent); res.max = Math.max(...recent);
+    res.sure = recent.length >= 2;
+  } else { res.avg = 28; res.min = res.max = 28; }
+  const lens = ps.filter(p=>!p.approx).map(p=>p.len);
+  if (lens.length) res.lens = Math.round(lens.slice(-6).reduce((a,b)=>a+b,0)/Math.min(lens.length,6));
+  res.lastStart = ps[ps.length-1].start;
+  return res;
+}
+
+function predictions(a){
+  if (a.lastStart == null) return [];
+  const out = [];
+  for (let k=1;k<=3;k++){
+    const s = a.lastStart + a.avg*k;
+    out.push({start:s, end:s+a.lens-1, ov:s-14, ws:s-18, we:s-13});
+  }
+  return out;
+}
+
+function renderSummary(){
+  const a = analyze(), el = document.getElementById('summary'), t = todayN();
+  if (!a.ps.length){
+    el.innerHTML = '<div class="next">還沒有紀錄<small>點下方日曆標記月經日，或用「一次記錄多天」補登過去的紀錄。</small></div>';
+    return;
+  }
+  const pr = predictions(a);
+  let nxt = pr[0];
+  // If the predicted start has passed without a new record, say so
+  const late = t - nxt.start;
+  let head, subline;
+  if (late > 0){
+    head = '已延後 '+late+' 天';
+    subline = '原預測 '+show(nxt.start)+' 開始';
+  } else if (late === 0){
+    head = '預測今天開始';
+    subline = '';
+  } else {
+    head = show(nxt.start)+'　還有 '+(-late)+' 天';
+    subline = a.sure && a.max !== a.min
+      ? '可能落在 '+show(a.lastStart+a.min)+' 至 '+show(a.lastStart+a.max)+' 之間'
+      : '';
+  }
+  if (!a.cycles.length) subline += (subline?'；':'')+'目前只有一次紀錄，暫以 28 天估算';
+  else if (!a.sure) subline += (subline?'；':'')+'紀錄還少，預測僅供參考';
+  let tip = '';
+  if (late <= 0){
+    const w = pr.find(p => p.we >= t);
+    if (w){
+      if (t >= w.ws) tip = '今天在排卵期前後（預估排卵日 '+show(w.ov)+'），分泌物可能比平常多，留意一下就好。';
+      else if (w.ws - t <= 10) tip = '排卵期預計 '+show(w.ws)+' – '+show(w.we)+'，這幾天分泌物可能會比較多。';
+    }
+  }
+  el.innerHTML =
+    '<div class="next">'+head+(subline?'<small>'+subline+'</small>':'')+'</div>'+
+    (tip?'<div class="tip">'+tip+'</div>':'')+
+    '<div class="stats">'+
+      '<div><b>'+(a.cycles.length?a.avg:'—')+'</b><span>平均週期（天）</span></div>'+
+      '<div><b>'+a.lens+'</b><span>平均經期（天）</span></div>'+
+      '<div><b>'+a.ps.length+'</b><span>已記錄次數</span></div>'+
+    '</div>';
+}
+
+function renderCal(){
+  const y = view.getFullYear(), m = view.getMonth();
+  document.getElementById('title').textContent = y+' 年 '+(m+1)+' 月';
+  const first = new Date(y,m,1).getDay(), count = new Date(y,m+1,0).getDate();
+  const a = analyze(), pr = predictions(a), t = todayN();
+  const cal = document.getElementById('cal');
+  let html = '';
+  for (let i=0;i<first;i++) html += '<button class="day empty" tabindex="-1" aria-hidden="true"></button>';
+  for (let d=1; d<=count; d++){
+    const s = y+'-'+pad(m+1)+'-'+pad(d), n = num(s), v = data.days[s];
+    let cls = 'day';
+    if (v === 'u') cls += ' u'; else if (v) cls += ' p';
+    else if (n >= t && pr.some(p => n >= p.start && n <= p.end)) cls += ' pred';
+    else if (n >= t && pr.some(p => n >= p.ws && n <= p.we)) cls += ' win';
+    if (n >= t && pr.some(p => p.ov === n)) cls += ' ov';
+    if (n === t) cls += ' today';
+    html += '<button class="'+cls+'" data-d="'+s+'">'+d+'</button>';
+  }
+  cal.innerHTML = html;
+}
+
+function renderHist(){
+  const ps = analyze().ps.slice().reverse(), el = document.getElementById('hist');
+  if (!ps.length){ el.innerHTML = '<li><span>尚無紀錄</span></li>'; return; }
+  const all = analyze().ps;
+  el.innerHTML = ps.map(p => {
+    const i = all.indexOf(p);
+    const prev = all[i-1];
+    const cyc = prev ? (p.start - prev.start) : null;
+    const approx = p.approx || (prev && prev.approx);
+    const range = (p.approx?'約 ':'')+show(p.start)+(p.len>1?' – '+show(p.end):'');
+    const info = p.len+' 天'+(cyc?'・週期 '+(approx?'約 ':'')+cyc+' 天':'');
+    return '<li><span>'+range+'</span><span>'+info+'</span></li>';
+  }).join('');
+}
+
+function render(){ renderSummary(); renderCal(); renderHist(); }
+
+document.getElementById('wds').innerHTML = ['日','一','二','三','四','五','六'].map(w=>'<div class="wd">'+w+'</div>').join('');
+document.getElementById('cal').addEventListener('click', e => {
+  const b = e.target.closest('[data-d]'); if (!b) return;
+  const s = b.dataset.d;
+  if (data.days[s]) delete data.days[s]; else data.days[s] = 'p';
+  save(); render();
+});
+document.getElementById('prev').onclick = () => { view.setMonth(view.getMonth()-1); renderCal(); };
+document.getElementById('nextm').onclick = () => { view.setMonth(view.getMonth()+1); renderCal(); };
+
+document.getElementById('addRange').onclick = () => {
+  const f = document.getElementById('from').value, t = document.getElementById('to').value || f;
+  if (!f) { alert('請先選擇開始日期'); return; }
+  let a = num(f), b = num(t);
+  if (b < a) [a,b] = [b,a];
+  if (b - a > 14) { alert('單次最多記錄 15 天，請縮小範圍'); return; }
+  const unsure = document.getElementById('unsure').checked;
+  for (let n=a; n<=b; n++) data.days[str(n)] = (n===a && unsure) ? 'u' : 'p';
+  save();
+  const d = new Date(a*864e5); view = new Date(d.getUTCFullYear(), d.getUTCMonth(), 1);
+  render();
+};
+
+document.getElementById('exp').onclick = () => {
+  const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'period-backup-'+fmt(new Date())+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+};
+document.getElementById('imp').onclick = () => document.getElementById('file').click();
+document.getElementById('file').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if (!d || typeof d.days !== 'object') throw 0;
+      if (!confirm('匯入會取代目前的所有資料，確定嗎？')) return;
+      data = {days:d.days}; save(); render();
+    } catch(err){ alert('檔案格式不正確'); }
+  };
+  r.readAsText(f); e.target.value = '';
+};
+document.getElementById('clr').onclick = () => {
+  if (confirm('確定要清除全部紀錄嗎？此動作無法復原。')) { data = {days:{}}; save(); render(); }
+};
+
+render();
+</script>
+</body>
+</html>
